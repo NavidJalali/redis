@@ -1,2 +1,6 @@
-debug/
-target/
+debug
+target
+.bloop
+.metals
+.vscode
+**/metals.sbt
