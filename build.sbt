@@ -5,6 +5,10 @@ ThisBuild / organizationName := "CodeCrafters"
 
 assembly / assemblyJarName := "redis.jar"
 
+addCompilerPlugin(
+  "org.typelevel" % "kind-projector" % "0.13.3" cross CrossVersion.full
+)
+
 lazy val root = (project in file("."))
   .settings(
     name := "codecrafter-redis",
