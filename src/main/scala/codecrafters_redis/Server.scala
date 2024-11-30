@@ -64,11 +64,8 @@ object Server {
         println(s"Successfully bound to $address")
         Using.resource(value) { serverSocket =>
           println(s"Server is running on ${serverSocket.getLocalSocketAddress}")
-
           val socket = serverSocket.accept()
-
           println(s"Accepted connection from ${socket.getInetAddress}")
-
         }
   }
 }
