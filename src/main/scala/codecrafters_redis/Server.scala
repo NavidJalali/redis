@@ -66,6 +66,7 @@ object Server {
           println(s"Server is running on ${serverSocket.getLocalSocketAddress}")
           val socket = serverSocket.accept()
           println(s"Accepted connection from ${socket.getInetAddress}")
+          Thread.sleep(10000)
         }
   }
 }
