@@ -12,12 +12,4 @@ object RedisRequest {
   case object Ping extends RedisRequest {
     type Response = RedisResponse.Pong.type
   }
-
-  given Decoder[Array[Byte], RedisRequest] =
-    Decoder.utf8Decoder.emap(string =>
-      string match {
-        case "PING" => Right(Ping)
-        case _      => Left(Decoder.DecodeError.BadInput(string))
-      }
-    )
 }

@@ -3,6 +3,7 @@ package io.reverie.redis
 import cats.syntax.all.*
 import io.reverie.redis.network.*
 import io.reverie.redis.codec.*
+import io.reverie.redis.protocol.*
 import io.reverie.redis.commands.*
 import java.util.concurrent.*
 import scala.util.*
@@ -15,19 +16,19 @@ object Server {
   private def handleSocket(socket: Socket, redis: Redis) =
     Using.resource(socket.getInputStream) { inputStream =>
       Using.resource(socket.getOutputStream) { outputStream =>
-        val bytes = inputStream.readAllBytes()
-        val command =
-          Decoder[Array[Byte], RedisRequest].decode(bytes)
-        command match
-          case Left(error) =>
-            logger.error(s"Failed to decode command: $error")
-            outputStream.write(protocol.error("Failed to decode command").getBytes)
-          case Right(request) =>
-            val response = redis.request(request)
-            logger.info(s"Request: $request Response: $response")
-            val encodedResponse =
-              Encoder[commands.RedisResponse, Array[Byte]].encode(response)
-            outputStream.write(encodedResponse)
+        // val bytes = inputStream.readAllBytes()
+        // val command =
+        //   Decoder[Array[Byte], RedisRequest].decode(bytes)
+        // command match
+        //   case Left(error) =>
+        //     logger.error(s"Failed to decode command: $error")
+        //     outputStream.write(protocol.error("Failed to decode command").getBytes)
+        //   case Right(request) =>
+        //     val response = redis.request(request)
+        //     logger.info(s"Request: $request Response: $response")
+        //     val encodedResponse =
+        //       Encoder[commands.RedisResponse, Array[Byte]].encode(response)
+        //     outputStream.write(encodedResponse)
       }
     }
 

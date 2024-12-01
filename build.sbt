@@ -23,7 +23,10 @@ lazy val root = (project in file("."))
 
       // logging
       "org.slf4j" % "slf4j-api" % Versions.slf4j,
-      "org.slf4j" % "slf4j-simple" % Versions.slf4j
+      "org.slf4j" % "slf4j-simple" % Versions.slf4j,
+
+      // testing
+      "org.scalameta" %% "munit" % "1.0.2" % Test
     ),
     assembly / assemblyJarName := "redis.jar",
     assembly / assemblyMergeStrategy := {
