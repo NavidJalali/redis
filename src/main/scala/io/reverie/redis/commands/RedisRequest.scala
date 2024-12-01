@@ -1,6 +1,7 @@
 package io.reverie.redis.commands
 
 import io.reverie.redis.codec.Decoder
+import io.reverie.redis.protocol.RESP
 
 sealed trait RedisRequest extends Product with Serializable {
   type Response
@@ -12,4 +13,7 @@ object RedisRequest {
   case object Ping extends RedisRequest {
     type Response = RedisResponse.Pong.type
   }
+
+  given Decoder[RESP, RedisRequest] =
+    ???
 }

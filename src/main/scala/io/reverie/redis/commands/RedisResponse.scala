@@ -6,11 +6,13 @@ import io.reverie.redis.codec.Encoder
 sealed trait RedisResponse extends Product with Serializable
 
 object RedisResponse {
+  final case class Error(message: String) extends RedisResponse
   case object Pong extends RedisResponse
 
-  given Encoder[RedisResponse, Array[Byte]] = {
-    Encoder.fromFunction { case Pong =>
-      string("PONG").getBytes
+  given Encoder[RedisResponse, RESP] = {
+    Encoder.fromFunction {
+      case Pong => RESP.Str("PONG")
+      case Error(message) => RESP.Err(message)
     }
   }
 }

@@ -23,7 +23,14 @@ trait Decoder[In, Out] {
 }
 
 object Decoder {
-  def apply[A, B](using ev: Decoder[A, B]): Decoder[A, B] = ev
+  def apply[A, B]: Apply[A, B] = new Apply[A, B]
+
+  final class Apply[A, B] {
+    def apply()(using instance: Decoder[A, B]): Decoder[A, B] = instance
+
+    def via[C](using ac: Decoder[A, C], cb: Decoder[C, B]): Decoder[A, B] =
+      ac ~> cb
+  }
 
   def fromFunction[A, B](f: A => Either[DecodeError, B]): Decoder[A, B] =
     (a: A) => f(a)
@@ -39,9 +46,12 @@ object Decoder {
     Decoder.fromFunction(_.split("\r\n", -1).asRight)
 
   sealed trait DecodeError extends Product with Serializable
+
   object DecodeError {
     case object NotUtf8 extends DecodeError
-    final case class ExhaustedInput(raw: String) extends DecodeError
+
+    final case class ExhaustedInput[Message](message: Message) extends DecodeError
+
     final case class BadInput(reason: String, input: String) extends DecodeError
   }
 }

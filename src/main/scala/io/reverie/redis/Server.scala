@@ -1,41 +1,37 @@
 package io.reverie.redis
 
-import cats.syntax.all.*
 import io.reverie.redis.network.*
 import io.reverie.redis.codec.*
-import io.reverie.redis.protocol.*
 import io.reverie.redis.commands.*
-import java.util.concurrent.*
+import io.reverie.redis.protocol.RESP
+
 import scala.util.*
 import org.slf4j.LoggerFactory
+
 import java.net.Socket
 
 object Server {
-  val logger = LoggerFactory.getLogger(classOf[Server.type])
+  private val logger = LoggerFactory.getLogger(classOf[Server.type])
 
-  private def handleSocket(socket: Socket, redis: Redis) =
+  private def handleSocket(socket: Socket, redis: Redis): Unit =
     Using.resource(socket.getInputStream) { inputStream =>
       Using.resource(socket.getOutputStream) { outputStream =>
-        // val bytes = inputStream.readAllBytes()
-        // val command =
-        //   Decoder[Array[Byte], RedisRequest].decode(bytes)
-        // command match
-        //   case Left(error) =>
-        //     logger.error(s"Failed to decode command: $error")
-        //     outputStream.write(protocol.error("Failed to decode command").getBytes)
-        //   case Right(request) =>
-        //     val response = redis.request(request)
-        //     logger.info(s"Request: $request Response: $response")
-        //     val encodedResponse =
-        //       Encoder[commands.RedisResponse, Array[Byte]].encode(response)
-        //     outputStream.write(encodedResponse)
+        Redis.decoder.decode(inputStream) match
+          case Left(decodeError) =>
+            logger.error(s"Failed to decode command: $decodeError")
+            val error = RedisResponse.Error("Failed to decode command")
+            outputStream.write(Redis.encoder.encode(error))
+          case Right(request) =>
+            val response = redis.request(request)
+            logger.info(s"Request: $request Response: $response")
+            outputStream.write(Redis.encoder.encode(response))
       }
     }
 
-  private def server(addess: InetSocketAddress, redis: Redis) =
-    bind(addess) match
+  private def server(address: InetSocketAddress, redis: Redis): Unit =
+    bind(address) match
       case Left(error) =>
-        logger.error(s"Failed to bind to $addess: $error")
+        logger.error(s"Failed to bind to $address: $error")
         System.exit(1)
       case Right(serverSocket) =>
         logger.info(s"Server is running on ${serverSocket.getLocalSocketAddress}")
