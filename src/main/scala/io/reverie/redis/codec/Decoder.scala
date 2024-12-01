@@ -35,23 +35,10 @@ object Decoder {
   def fromFunction[A, B](f: A => Either[DecodeError, B]): Decoder[A, B] =
     (a: A) => f(a)
 
-  val utf8: Decoder[Array[Byte], String] =
-    Decoder.fromFunction(bytes =>
-      Either
-        .catchNonFatal(new String(bytes, UTF_8))
-        .leftMap(_ => DecodeError.NotUtf8)
-    )
-
-  val lines: Decoder[String, Array[String]] =
-    Decoder.fromFunction(_.split("\r\n", -1).asRight)
-
   sealed trait DecodeError extends Product with Serializable
 
   object DecodeError {
-    case object NotUtf8 extends DecodeError
-
     final case class ExhaustedInput[Message](message: Message) extends DecodeError
-
-    final case class BadInput(reason: String, input: String) extends DecodeError
+    final case class BadInput[Input](reason: String, input: Input) extends DecodeError
   }
 }

@@ -13,9 +13,9 @@ import java.net.Socket
 object Server {
   private val logger = LoggerFactory.getLogger(classOf[Server.type])
 
-  private def handleSocket(socket: Socket, redis: Redis): Unit =
-    Using.resource(socket.getInputStream) { inputStream =>
-      Using.resource(socket.getOutputStream) { outputStream =>
+  private def handleSocket(socket: Socket, redis: Redis) =
+    Using(socket.getInputStream) { inputStream =>
+      Using(socket.getOutputStream) { outputStream =>
         Redis.decoder.decode(inputStream) match
           case Left(decodeError) =>
             logger.error(s"Failed to decode command: $decodeError")
@@ -26,7 +26,7 @@ object Server {
             logger.info(s"Request: $request Response: $response")
             outputStream.write(Redis.encoder.encode(response))
       }
-    }
+    }.flatten
 
   private def server(address: InetSocketAddress, redis: Redis): Unit =
     bind(address) match
@@ -36,7 +36,7 @@ object Server {
       case Right(serverSocket) =>
         logger.info(s"Server is running on ${serverSocket.getLocalSocketAddress}")
         while true do
-          Using.resource(serverSocket.accept()) { clientSocket =>
+          Using(serverSocket.accept()) { clientSocket =>
             logger.info(s"Accepted connection from ${clientSocket.getRemoteSocketAddress}")
             handleSocket(clientSocket, redis)
           }

@@ -1,6 +1,6 @@
 package io.reverie.redis.protocol
 
-import cats.syntax.either.*
+import cats.syntax.all.*
 import io.reverie.redis.codec.Encoder
 import io.reverie.redis.codec.Decoder
 import io.reverie.redis.codec.Decoder.DecodeError
@@ -73,111 +73,42 @@ object RESP {
         raw.toIntOption
           .toRight(DecodeError.BadInput("Cannot be cast into Int", raw))
 
+      def arr(source: BufferedReader, length: scala.Int): Either[DecodeError, Seq[RESP]] =
+        boundary:
+          val builder = Vector.newBuilder[RESP]
+          0 until length foreach { _ =>
+            resp(source) match
+              case Left(error) => boundary.break(error.asLeft)
+              case Right(value) => builder += value
+          }
+          builder.result().asRight
+
+      def resp(reader: BufferedReader): Either[DecodeError, RESP] =
+        for {
+          firstChar <- readChar(reader)
+          resp <-
+            firstChar match
+              case '+' => readLine(reader).map(RESP.Str(_))
+              case '-' => readLine(reader).map(RESP.Err(_))
+              case ':' => readLine(reader).flatMap(int).map(RESP.Int(_))
+              case '$' =>
+                readLine(reader)
+                  .flatMap(int)
+                  .flatMap(readExact(reader, _))
+                  .map(bytes => RESP.Bin(new String(bytes)))
+              case '*' =>
+                readLine(reader)
+                  .flatMap(int)
+                  .flatMap(arr(reader, _))
+                  .map(RESP.Arr(_))
+              case other => DecodeError.BadInput("Unknown RESP type", other).asLeft
+        } yield resp
+
       (is: InputStream) =>
         Using.resource(Source.fromInputStream(is)) {
           source =>
             val reader = source.bufferedReader()
-            for {
-              firstChar <- readChar(reader)
-              resp <-
-                firstChar match
-                  case '+' => readLine(reader).map(RESP.Str(_))
-                  case '-' => readLine(reader).map(RESP.Err(_))
-                  case ':' => readLine(reader).flatMap(int).map(RESP.Int(_))
-                  case '$' =>
-                    readLine(reader)
-                      .flatMap(int)
-                      .flatMap(readExact(reader, _))
-                      .map(bytes => RESP.Bin(new String(bytes)))
-                  case '*' =>
-                    readLine(reader)
-                      .flatMap(int)
-                      .flatMap { length =>
-                        (0 until length)
-                          .foldLeft(Right(Vector.empty[RESP]): Either[DecodeError, Vector[RESP]]) {
-                            case (acc, _) =>
-                              acc.flatMap { values =>
-                                Decoder[InputStream, RESP].decode(is).map(values :+ _)
-                              }
-                          }
-                          .map(RESP.Arr(_))
-                      }
-            } yield resp
+            resp(reader)
         }
     }
-
-
-  //        given Decoder[Array[Byte], RESP] =
-  //          Decoder.utf8 emap { raw =>
-  //            for {
-  //              lines <- Decoder.lines.decode(raw)
-  //              firstLine <-
-  //                lines
-  //                  .headOption
-  //                  .toRight(
-  //                    Decoder.DecodeError.ExhaustedInput(raw)
-  //                  )
-  //              firstChar <-
-  //                firstLine
-  //                  .headOption
-  //                  .toRight(
-  //                    Decoder.DecodeError.ExhaustedInput(raw)
-  //                  )
-  //              resp <-
-  //                firstChar match
-  //                  // simple string
-  //                  case '+' =>
-  //                    val value = firstLine.tail
-  //                    RESP.Str(value).asRight
-  //                  // simple error
-  //                  case '-' =>
-  //                    val value = firstLine.tail
-  //                    RESP.Err(value).asRight
-  //                  // integer
-  //                  case ':' =>
-  //                    firstLine.tail
-  //                      .strip()
-  //                      .toIntOption
-  //                      .toRight(Decoder.DecodeError.BadInput("Cannot be cast into Int", firstLine))
-  //                      .map(RESP.Int.apply)
-  //                  case '$' =>
-  //                    for {
-  //                      length <-
-  //                        firstLine
-  //                          .tail
-  //                          .toIntOption
-  //                          .toRight(
-  //                            Decoder.DecodeError.BadInput("Cannot parse length", firstLine)
-  //                          )
-  //                      data <-
-  //                        Either.cond(
-  //                          lines.length >= 2,
-  //                          lines(1),
-  //                          Decoder.DecodeError.ExhaustedInput(raw)
-  //                        )
-  //                      result <-
-  //                        Either.cond(
-  //                          data.length == length,
-  //                          RESP.Bin(data),
-  //                          Decoder.DecodeError.BadInput(
-  //                            s"Expected $length bytes, got ${data.length}",
-  //                            data
-  //                          )
-  //                        )
-  //                    } yield result
-  //                  case '*' =>
-  //                    for {
-  //                      length <-
-  //                        firstLine
-  //                          .tail
-  //                          .toIntOption
-  //                          .toRight(
-  //                            Decoder.DecodeError.BadInput("Cannot parse length", firstLine)
-  //                          )
-  //
-  //                      data = lines.drop(1)
-  //
-  //                    } yield ???
-  //            } yield resp
-  //          }
 }
