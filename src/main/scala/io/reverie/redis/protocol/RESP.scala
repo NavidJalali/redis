@@ -105,10 +105,9 @@ object RESP {
         } yield resp
 
       (is: InputStream) =>
-        Using.resource(Source.fromInputStream(is)) {
-          source =>
-            val reader = source.bufferedReader()
-            resp(reader)
-        }
+        // This source is not closed on purpose. The input stream is managed by the caller
+        // Closing it too early will cause the socket to be closed, preventing the caller from
+        // reading/writing further.
+        resp(Source.fromInputStream(is).bufferedReader())
     }
 }
